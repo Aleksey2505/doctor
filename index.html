@@ -628,9 +628,26 @@
         font-size: 1em;
     }
 }
-Добавьте подсказ
+.patient-label {
+        font-size: 12px;
+        padding: 6px 12px;
+        min-width: 150px;
+        max-width: 80vw;
+    }
 
+    .patient-highlight {
+        width: 120px;
+        height: 120px;
+    }
 
+    /* Более точные позиции на мобильных */
+    #patient-label-0 { left: 50% !important; top: 25% !important; }   /* Григорий */
+    #patient-label-1 { left: 15% !important; top: 30% !important; }   /* Мария */
+    #patient-label-2 { right: 15% !important; top: 30% !important; }  /* Иван */
+
+    #patient-highlight-0 { left: 50% !important; top: 35% !important; }
+    #patient-highlight-1 { left: 15% !important; top: 40% !important; }
+    #patient-highlight-2 { right: 15% !important; top: 40% !important; }
 
 
 
@@ -1482,7 +1499,7 @@ function setupMobileControls() {
             });
         }
 
-        function createPatientHighlight(position, patientData) {
+    function createPatientHighlight(position, patientData) {
     const highlight = document.createElement('div');
     highlight.className = 'patient-highlight';
     highlight.style.left = '50%';
