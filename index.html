@@ -594,20 +594,22 @@
 
 /* Подсказка для мобильного управления */
 #mobile-hint {
+    pointer-events: auto; /* Чтобы можно было нажать на крестик */
     position: absolute;
     bottom: 180px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.8);
     color: #64b5f6;
-    padding: 10px 15px;
-    border-radius: 10px;
-    font-size: 12px;
+    padding: 15px 20px;
+    border-radius: 12px;
+    font-size: 13px;
     text-align: center;
     display: none;
     z-index: 12;
     border: 1px solid #64b5f6;
-    pointer-events: none;
+    max-width: 90%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 
 /* Для мобильных устройств */
@@ -1030,7 +1032,7 @@ function setupMobileControls() {
         ];
 
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
-        function init() {
+                function init() {
             createScene();
             createLights();
             createWorld();
@@ -1042,32 +1044,35 @@ function setupMobileControls() {
             setupMobileControls();
             setupEventListeners();
             initSnow();
-            
+           
             // Запуск фоновой музыки
             setTimeout(() => {
                 const music = document.getElementById('background-music');
                 music.volume = 0.3;
                 music.play().catch(e => console.log("Автовоспроизведение музыки заблокировано"));
             }, 1000);
-            
+           
             cameraInitialized = true;
             updateUI();
             animate();
 
+            // === ОБРАБОТКА МОБИЛЬНОЙ ПОДСКАЗКИ (только после полной инициализации) ===
+            const mobileHint = document.getElementById('mobile-hint');
+            const closeHintBtn = document.getElementById('close-hint');
 
-            document.getElementById('close-hint')?.addEventListener('click', () => {
-    document.getElementById('mobile-hint').style.display = 'none';
-    
-    // Сохраняем, что пользователь закрыл подсказку (чтобы не показывать снова при перезагрузке)
-    localStorage.setItem('mobileHintClosed', 'true');
-});
+            if (closeHintBtn) {
+                closeHintBtn.addEventListener('click', () => {
+                    mobileHint.style.display = 'none';
+                    localStorage.setItem('mobileHintClosed', 'true');
+                });
+            }
 
-// Проверяем при загрузке — показывать ли подсказку
-if (isMobile && localStorage.getItem('mobileHintClosed') !== 'true') {
-    document.getElementById('mobile-hint').style.display = 'block';
-} else {
-    document.getElementById('mobile-hint').style.display = 'none';
-}
+            // Показываем подсказку только на мобильных и если пользователь её не закрывал
+            if (isMobile && localStorage.getItem('mobileHintClosed') !== 'true') {
+                mobileHint.style.display = 'block';
+            } else {
+                mobileHint.style.display = 'none';
+            }
         }
 
         function createScene() {
