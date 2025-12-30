@@ -1504,61 +1504,42 @@ function setupMobileControls() {
     patientHighlights.push({highlight, label, patientData});
 }
 
-          function updatePatientHighlights() {
-    if (!camera || !patientHighlights.length) return;
+    function updatePatientHighlights() {
+    // Фиксированные позиции для трёх пациентов (в % от экрана)
+    const positions = [
+        { left: '50%', top: '30%' },   // Григорий - центр, чуть выше центра
+        { left: '20%', top: '35%' },   // Мария - слева
+        { right: '20%', top: '35%' }   // Иван - справа (используем right вместо left)
+    ];
 
     patientHighlights.forEach((patientObj, index) => {
         const {highlight, label} = patientObj;
-        
-        if (index < PATIENTS.length) {
-            const patientPos = PATIENTS[index].position;
-            const vector = new THREE.Vector3(patientPos.x, 1.8, patientPos.z); // Немного выше
-            
-            // Преобразуем 3D координаты в 2D
-            vector.project(camera);
-            
-            // Если пациент за камерой, не показываем подсветку
-            if (vector.z > 1) {
-                highlight.style.display = 'none';
-                label.style.display = 'none';
-                return;
-            }
-            
-            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-            const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-            
-            // Проверяем, попадает ли точка в видимую область
-            if (x >= -100 && x <= window.innerWidth + 100 && 
-                y >= -100 && y <= window.innerHeight + 100) {
-                
-                // Позиция подсветки
-                highlight.style.left = `${x - 100}px`;
-                highlight.style.top = `${y - 100}px`;
-                
-                // Позиция надписи (над пациентом)
-                label.style.left = `${x}px`;
-                label.style.top = `${y - 120}px`;
-                
-                // Скрываем для вылеченных пациентов
-                const patient = gameObjects.find(obj => 
-                    obj.userData && obj.userData.type === 'patient' && 
-                    obj.userData.id === index
-                );
-                
-                if (patient && patient.userData.healed) {
-                    highlight.style.display = 'none';
-                    label.style.display = 'block';
-                    label.className = 'patient-label healed';
-                    label.querySelector('.diagnosis').textContent = '✅ Вылечен';
-                } else {
-                    highlight.style.display = 'block';
-                    label.style.display = 'block';
-                    label.className = 'patient-label';
-                }
-            } else {
-                highlight.style.display = 'none';
-                label.style.display = 'none';
-            }
+        const pos = positions[index];
+
+        // Подсветка (круглая)
+        highlight.style.display = 'block';
+        if (pos.left) highlight.style.left = pos.left;
+        if (pos.right) highlight.style.right = pos.right;
+        highlight.style.top = pos.top;
+        highlight.style.transform = 'translate(-50%, -50%)';
+
+        // Надпись
+        label.style.display = 'block';
+        if (pos.left) label.style.left = pos.left;
+        if (pos.right) label.style.right = pos.right;
+        label.style.top = pos.top;
+        label.style.transform = 'translate(-50%, -100%)';
+
+        // Для вылеченных пациентов
+        const patient = gameObjects.find(obj =>
+            obj.userData && obj.userData.type === 'patient' && obj.userData.id === index
+        );
+
+        if (patient && patient.userData.healed) {
+            label.classList.add('healed');
+            label.querySelector('.diagnosis').textContent = '✅ Вылечен';
+        } else {
+            label.classList.remove('healed');
         }
     });
 }
