@@ -1667,76 +1667,9 @@ function setupMobileControls() {
             window.addEventListener('resize', onWindowResize);
         }
 
-        function setupMobileControls() {
-            if (!isMobile) return;
+        
 
-            const joystick = document.getElementById('joystick');
-            const joystickArea = document.querySelector('.joystick-area');
-            const actionBtn = document.getElementById('action-btn');
-
-            let joystickStartX = 0;
-            let joystickStartY = 0;
-
-            // Джойстик
-            joystick.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                joystickActive = true;
-                const rect = joystickArea.getBoundingClientRect();
-                joystickStartX = rect.left + rect.width / 2;
-                joystickStartY = rect.top + rect.height / 2;
-                updateJoystick(e.touches[0]);
-            });
-
-            document.addEventListener('touchmove', (e) => {
-                if (joystickActive) {
-                    e.preventDefault();
-                    updateJoystick(e.touches[0]);
-                }
-            });
-
-            document.addEventListener('touchend', (e) => {
-                if (joystickActive) {
-                    e.preventDefault();
-                    joystickActive = false;
-                    joystickVector = { x: 0, y: 0 };
-                    joystick.style.transform = 'translate(35px, 35px)';
-                }
-            });
-
-            // Кнопка действия
-            actionBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                interact();
-                actionBtn.style.transform = 'scale(0.95)';
-            });
-
-            actionBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                actionBtn.style.transform = 'scale(1)';
-            });
-
-            function updateJoystick(touch) {
-                const x = touch.clientX - joystickStartX;
-                const y = touch.clientY - joystickStartY;
-                
-                const distance = Math.sqrt(x * x + y * y);
-                const maxDistance = 35;
-                
-                if (distance > maxDistance) {
-                    const angle = Math.atan2(y, x);
-                    joystickVector.x = Math.cos(angle);
-                    joystickVector.y = Math.sin(angle);
-                    
-                    const limitedX = Math.cos(angle) * maxDistance;
-                    const limitedY = Math.sin(angle) * maxDistance;
-                    joystick.style.transform = `translate(${limitedX + 35}px, ${limitedY + 35}px)`;
-                } else {
-                    joystickVector.x = x / maxDistance;
-                    joystickVector.y = y / maxDistance;
-                    joystick.style.transform = `translate(${x + 35}px, ${y + 35}px)`;
-                }
-            }
-        }
+        
 
         function setupEventListeners() {
             document.getElementById('camera-toggle').addEventListener('click', toggleCamera);
