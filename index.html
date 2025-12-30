@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фарм Лаборатория 3D 💊</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: white;
+            touch-action: none;
+        }
+        
+        #scene-container { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        /* Панель информации */
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            max-width: 320px;
+            pointer-events: auto;
+        }
+        
+        .info-panel h2 {
+            color: #64b5f6;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .stat-bar {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* Мобильное управление */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: none;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        
+        .joystick-area {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(100, 150, 255, 0.8);
+            border-radius: 50%;
+            top: 35px;
+            left: 35px;
+            touch-action: none;
+        }
+        
+        .action-buttons {
+            position: absolute;
+            bottom: 40px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 100, 100, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            touch-action: none;
+            cursor: pointer;
+        }
+        
+        .action-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 100, 100, 1);
+        }
+        
+        /* Кнопка переключения камеры */
+        #camera-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            pointer-events: auto;
+            cursor: pointer;
+            z-index: 11;
+        }
+        
+        /* Инвентарь */
+        #inventory {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 12px;
+            min-width: 200px;
+            pointer-events: auto;
+            border: 2px solid rgba(100, 255, 100, 0.3);
+        }
+        
+        .inventory-slots {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .inventory-slot {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            position: relative;
+        }
+        
+        .inventory-slot.filled {
+            background: rgba(100, 255, 100, 0.2);
+            border: 2px solid #64ff64;
+        }
+        
+        .drug-name {
+            font-size: 10px;
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+        
+        /* Подсказка взаимодействия */
+        #interaction-hint {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            white-space: nowrap;
+            border: 2px solid #64b5f6;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        /* Оверлей анимаций */
+        .animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+        
+        /* Анимация клеток */
+        .cell-animation {
+            background: radial-gradient(circle at center, rgba(0, 255, 0, 0.1), transparent);
+        }
+        
+        .immune-cell {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            filter: blur(1px);
+            animation: immuneFloat 3s linear infinite;
+        }
+        
+        .bacteria-cell {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #ff0000;
+            border-radius: 50%;
+            filter: blur(1px);
+            animation: bacteriaFloat 2s linear infinite;
+        }
+        
+        .antibody-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #00ffff;
+            border-radius: 50%;
+            filter: blur(2px);
+            animation: antibodyMove 1s linear forwards;
+        }
+        
+        @keyframes immuneFloat {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(10px, -10px); }
+            50% { transform: translate(0, -20px); }
+            75% { transform: translate(-10px, -10px); }
+        }
+        
+        @keyframes bacteriaFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0); }
+            50% { transform: translate(15px, 15px) rotate(180deg); }
+        }
+        
+        @keyframes antibodyMove {
+            from { 
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            to { 
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        /* Анимация сияния */
+        .glow-animation {
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2), transparent 70%);
+            animation: pulseGlow 2s ease-in-out;
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        /* Эффект цвета */
+        .color-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            animation: colorPulse 3s ease;
+        }
+        
+        @keyframes colorPulse {
+            0% { 
+                background: transparent;
+                opacity: 0;
+            }
+            20% { 
+                background: var(--wave-color);
+                opacity: 0.7;
+            }
+            100% { 
+                background: transparent;
+                opacity: 0;
+            }
+        }
+        
+        /* Вспышка */
+        .flash-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            animation: flash 0.5s ease-out;
+        }
+        
+        @keyframes flash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        /* Сообщения */
+        #message-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1001;
+            border: 3px solid #64b5f6;
+            max-width: 80%;
+            pointer-events: none;
+        }
+        
+        /* Экран завершения */
+        #game-complete {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .complete-content {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #1a237e, #311b92);
+            border-radius: 20px;
+            max-width: 600px;
+            border: 4px solid gold;
+        }
+        
+        /* Снег */
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+        }
+        
+        /* Подсветка пациента */
+        .patient-highlight {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 0, 0.3), transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+        
+        /* Эффект на маникене */
+        .manikin-effect {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--effect-color), transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+            animation: expand 1.5s ease-out;
+        }
+        
+        @keyframes expand {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        /* Адаптация для телефона */
+        @media (max-width: 768px) {
+            .info-panel {
+                max-width: calc(100% - 20px);
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            #mobile-controls {
+                display: block;
+            }
+            
+            #inventory {
+                top: 70px;
+                right: 10px;
+                padding: 10px;
+                min-width: 160px;
+            }
+            
+            .inventory-slot {
+                width: 40px;
+                height: 40px;
+                font-size: 14px;
+            }
+            
+            .drug-name {
+                font-size: 8px;
+            }
+            
+            .action-btn {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .joystick-area {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .joystick {
+                width: 40px;
+                height: 40px;
+                top: 30px;
+                left: 30px;
+            }
+        }
+
+
+
+
+        /* Добавьте этот стиль для музыкального контроллера */
+        #music-control {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            pointer-events: auto;
+            cursor: pointer;
+            z-index: 11;
+        }
+        
+        /* Анимация молекулярной битвы */
+        .molecule-battle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent);
+        }
+        
+        .molecule {
+            position: absolute;
+            border-radius: 50%;
+            animation: moleculeFloat 2s ease-in-out infinite;
+        }
+        
+        .good-molecule {
+            background: #00ff00;
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        .bad-molecule {
+            background: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+        }
+        
+        @keyframes moleculeFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0); }
+            33% { transform: translate(10px, -10px) rotate(120deg); }
+            66% { transform: translate(-10px, 10px) rotate(240deg); }
+        }
+        
+
+
+
+.patient-label {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 2;
+    border: 2px solid #ff4444;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+    margin-top: -10px;
+    text-align: center;
+    min-width: 200px;
+}
+
+.patient-label h4 {
+    margin: 0 0 5px 0;
+    color: #ffcc00;
+    font-size: 16px;
+}
+
+.patient-label .diagnosis {
+    color: #ff6666;
+    font-weight: bold;
+    margin: 0 0 3px 0;
+}
+
+.patient-label .description {
+    color: #88ff88;
+    font-size: 12px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.patient-label.healed {
+    border-color: #00ff00;
+}
+
+.patient-label.healed .diagnosis {
+    color: #00ff00;
+}
+    </style>
+</head>
+<body>
+     <audio id="background-music" loop>
+        <source src="music.mp3" type="audio/mpeg">
+        Ваш браузер не поддерживает аудио элемент.
+    </audio>
+    
+    <!-- Контейнер Three.js -->
+    <div id="scene-container"></div>
+    
+    <!-- Холст для снега -->
+    <canvas id="snow-canvas"></canvas>
+    
+    <!-- UI оверлей -->
+    <div id="ui-overlay">
+        <!-- Панель информации -->
+        <div class="info-panel">
+            <h2>🏥 Фарм Лаборатория</h2>
+           <!--p>Пациент: <span id="patient-name" style="color: #ffcc00;">Григорий</span></p>
+            <p>Диагноз: <span id="patient-diagnosis" style="color: #ff6666;">Грипп с высокой температурой</span></!p-->
+            <p style="font-size: 12px; color: #64b5f6; margin-top: 5px;">📍 Пациенты у задней стены с красной подсветкой</p>
+            <p style="font-size: 12px; color: #88ff88; margin-top: 5px;">✅ Вылечено: <span id="cured-count">0/3</span></p>
+            
+            <div style="margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>💪 Здоровье пациента:</span>
+                    <span id="health-value">100%</span>
+                </div>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="health-bar" style="width: 100%; background: linear-gradient(90deg, #4caf50, #8bc34a);">100%</div>
+                </div>
+            </div>
+            
+            <div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>⚡ Прогресс лечения:</span>
+                    <span id="progress-value">0%</span>
+                </div>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="progress-bar" style="width: 0%; background: linear-gradient(90deg, #2196f3, #03a9f4);">0%</div>
+                </div>
+            </div>
+            
+            <p style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
+                🔍 Найдите нужное лекарство и отнесите пациенту
+            </p>
+        </div>
+        
+        <!-- Кнопка переключения камеры -->
+        <div id="camera-toggle" title="Переключить камеру">📷</div>
+        
+        <!-- Кнопка управления музыкой -->
+        <div id="music-control" title="Включить/выключить музыку">🎵</div>
+        
+        <!-- Инвентарь -->
+        <div id="inventory">
+            <h3>🎒 Инвентарь (E)</h3>
+            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">Текущий препарат: <span id="current-drug">Нет</span></p>
+            <div class="inventory-slots">
+                <div class="inventory-slot" id="slot1">
+                    <div class="drug-icon"></div>
+                    <div class="drug-name"></div>
+                </div>
+                <div class="inventory-slot" id="slot2">
+                    <div class="drug-icon"></div>
+                    <div class="drug-name"></div>
+                </div>
+                <div class="inventory-slot" id="slot3">
+                    <div class="drug-icon"></div>
+                    <div class="drug-name"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Подсказка взаимодействия -->
+        <div id="interaction-hint">Нажмите E или кнопку для взаимодействия</div>
+        
+        <!-- Мобильное управление -->
+        <div id="mobile-controls">
+            <div class="joystick-area">
+                <div class="joystick" id="joystick"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn" id="action-btn">E</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Оверлей для анимаций -->
+    <div id="animation-overlay" class="animation-overlay"></div>
+    
+    <!-- Отображение сообщений -->
+    <div id="message-display"></div>
+    
+    <!-- Экран завершения -->
+    <div id="game-complete">
+        <div class="complete-content">
+            <h1 style="font-size: 2.5em; margin-bottom: 20px;">🏆 ПОБЕДА!</h1>
+            <p style="font-size: 1.2em; margin-bottom: 30px;">Все пациенты вылечены! Вы отличный врач!</p>
+            <p style="font-size: 1.5em; color: gold; margin: 20px 0;">🎄 С Новым 2026 Годом! 🎄</p>
+            <button onclick="location.reload()" style="
+                padding: 15px 40px;
+                background: linear-gradient(135deg, #4caf50, #2e7d32);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 1.2em;
+                cursor: pointer;
+                margin-top: 20px;
+            ">Играть снова</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ========== КОНФИГУРАЦИЯ ИГРЫ ==========
+        const CONFIG = {
+            playerSpeed: 0.15,
+            mobileSpeed: 0.12,
+            cameraHeight: 1.6,
+            interactionDistance: 3,
+            worldSize: 20,
+            cellCount: 30
+        };
+
+        // ========== ПЕРЕМЕННЫЕ ИГРЫ ==========
+        let scene, camera, renderer;
+        let player, playerMesh;
+        let keys = {};
+        let mouseX = 0, mouseY = 0;
+        let cameraMode = 'firstPerson';
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 };
+        
+        let currentPatient = 0;
+        let patientHealth = 100;
+        let patientProgress = 0;
+        let inventory = [];
+        let gameObjects = [];
+        let currentInteraction = null;
+        let animationId = null;
+        let cameraInitialized = false;
+        let snowParticles = [];
+        let patientHighlights = [];
+        let originalDrugPositions = new Map(); // Хранит исходные позиции препаратов
+        let curedPatientsCount = 0;
+        let totalPatients = 3;
+        let isCameraAnimating = false;
+
+        // ========== БАЗА ДАННЫХ ==========
+        const DRUG_DATABASE = {
+            paracetamol: {
+                name: "Парацетамол",
+                color: 0xFFFF88,
+                icon: "🌡️",
+                effect: 25,
+                animation: "feverReduction",
+                description: "Снижает температуру и боль",
+                targetArea: "head",
+                effectColor: "#00ffff"
+            },
+            amoxicillin: {
+                name: "Амоксициллин",
+                color: 0xFF4444,
+                icon: "💊",
+                effect: 40,
+                animation: "antibiotic",
+                description: "Антибиотик широкого спектра",
+                targetArea: "chest",
+                effectColor: "#ff0000"
+            },
+            aspirin: {
+                name: "Аспирин",
+                color: 0xFFFFFF,
+                icon: "💊",
+                effect: 15,
+                animation: "painRelief",
+                description: "Противовоспалительное средство",
+                targetArea: "joints",
+                effectColor: "#ff8800"
+            },
+            ibuprofen: {
+                name: "Ибупрофен",
+                color: 0xFF8844,
+                icon: "🔥",
+                effect: 20,
+                animation: "antiInflammatory",
+                description: "Снимает воспаление и боль",
+                targetArea: "body",
+                effectColor: "#ff4444"
+            },
+            omeprazole: {
+                name: "Омепразол",
+                color: 0xCC88FF,
+                icon: "🛡️",
+                effect: 30,
+                animation: "stomachProtection",
+                description: "Защищает желудок",
+                targetArea: "stomach",
+                effectColor: "#cc00ff"
+            }
+        };
+
+        const PATIENTS = [
+            {
+                name: "Григорий",
+                diagnosis: "Грипп с высокой температурой",
+                correctDrug: "paracetamol",
+                position: { x: 0, y: 0, z: 8 },
+                description: "Температура 39°C, головная боль"
+            },
+            {
+                name: "Мария",
+                diagnosis: "Бактериальная инфекция",
+                correctDrug: "amoxicillin",
+                position: { x: -6, y: 0, z: 8 },
+                description: "Ангина, кашель, слабость"
+            },
+            {
+                name: "Иван",
+                diagnosis: "Воспаление суставов",
+                correctDrug: "ibuprofen",
+                position: { x: 6, y: 0, z: 8 },
+                description: "Боль в коленях, отек"
+            }
+        ];
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        function init() {
+            createScene();
+            createLights();
+            createWorld();
+            createPlayer();
+            createDrugs();
+            createPatients();
+            createChristmasTree();
+            setupControls();
+            setupMobileControls();
+            setupEventListeners();
+            initSnow();
+            
+            // Запуск фоновой музыки
+            setTimeout(() => {
+                const music = document.getElementById('background-music');
+                music.volume = 0.3;
+                music.play().catch(e => console.log("Автовоспроизведение музыки заблокировано"));
+            }, 1000);
+            
+            cameraInitialized = true;
+            updateUI();
+            animate();
+        }
+
+        function createScene() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0a1a, 5, 15);
+            scene.background = new THREE.Color(0x0a0a1a);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, CONFIG.cameraHeight, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('scene-container').appendChild(renderer.domElement);
+        }
+
+        function createLights() {
+            // Основной свет
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            mainLight.position.set(5, 10, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            // Новогоднее освещение
+            const christmasLight1 = new THREE.PointLight(0xff0000, 0.3, 10);
+            christmasLight1.position.set(-8, 3, 0);
+            scene.add(christmasLight1);
+
+            const christmasLight2 = new THREE.PointLight(0x00ff00, 0.3, 10);
+            christmasLight2.position.set(8, 3, 0);
+            scene.add(christmasLight2);
+        }
+
+        function createWorld() {
+            // Пол (с узором)
+            const floorGeometry = new THREE.PlaneGeometry(CONFIG.worldSize, CONFIG.worldSize);
+            const floorTexture = createGridTexture();
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                map: floorTexture,
+                color: 0x3a3a7e,
+                metalness: 0.3,
+                roughness: 0.8
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Стены
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2a3a5e,
+                side: THREE.DoubleSide
+            });
+            const wallGeometry = new THREE.BoxGeometry(CONFIG.worldSize, 4, 0.2);
+
+            // Задняя стена (где пациенты)
+            const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+            backWall.position.set(0, 2, -CONFIG.worldSize/2 + 1);
+            backWall.receiveShadow = true;
+            scene.add(backWall);
+
+            // Передняя стена
+            const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+            frontWall.position.set(0, 2, CONFIG.worldSize/2 - 1);
+            scene.add(frontWall);
+
+            // Боковые стены
+            const sideWallGeometry = new THREE.BoxGeometry(0.2, 4, CONFIG.worldSize);
+            const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+            leftWall.position.set(-CONFIG.worldSize/2 + 1, 2, 0);
+            leftWall.receiveShadow = true;
+            scene.add(leftWall);
+
+            const rightWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+            rightWall.position.set(CONFIG.worldSize/2 - 1, 2, 0);
+            rightWall.receiveShadow = true;
+            scene.add(rightWall);
+
+            // Потолок
+            const ceilingGeometry = new THREE.PlaneGeometry(CONFIG.worldSize, CONFIG.worldSize);
+            const ceilingMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2a2a4e 
+            });
+            const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.y = 4;
+            ceiling.receiveShadow = true;
+            scene.add(ceiling);
+
+            // Столы
+            const tableGeometry = new THREE.BoxGeometry(1.5, 0.2, 0.8);
+            const tableMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x5a5a8e,
+                metalness: 0.5,
+                roughness: 0.5
+            });
+
+            for (let i = -2; i <= 2; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const table = new THREE.Mesh(tableGeometry, tableMaterial);
+                    table.position.set(i * 3, 0.1, j * 4);
+                    table.castShadow = true;
+                    table.receiveShadow = true;
+                    scene.add(table);
+                    
+                    // Ножки стола
+                    for (let k = -1; k <= 1; k += 2) {
+                        for (let l = -1; l <= 1; l += 2) {
+                            const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.7, 8);
+                            const leg = new THREE.Mesh(legGeometry, tableMaterial);
+                            leg.position.set(
+                                i * 3 + k * 0.6,
+                                -0.35,
+                                j * 4 + l * 0.3
+                            );
+                            leg.castShadow = true;
+                            scene.add(leg);
+                        }
+                    }
+                }
+            }
+
+            // Стеллажи с лекарствами
+            for (let i = -2; i <= 2; i++) {
+                const shelfGeometry = new THREE.BoxGeometry(2.8, 0.1, 0.6);
+                const shelfMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+                const shelf = new THREE.Mesh(shelfGeometry, shelfMaterial);
+                shelf.position.set(i * 3, 1.5, -6);
+                shelf.castShadow = true;
+                scene.add(shelf);
+            }
+        }
+
+        function createGridTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#3a3a7e';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            ctx.strokeStyle = '#4a4a9e';
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i <= 256; i += 32) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 256);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(256, i);
+                ctx.stroke();
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(8, 8);
+            
+            return texture;
+        }
+
+        function createPlayer() {
+            // Тело игрока
+            const bodyGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4caf50,
+                emissive: 0x1b5e20,
+                emissiveIntensity: 0.2
+            });
+            
+            playerMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            playerMesh.position.y = 0.4;
+            playerMesh.castShadow = true;
+            scene.add(playerMesh);
+
+            // Голова игрока
+            const headGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 0.9;
+            playerMesh.add(head);
+
+            player = {
+                position: new THREE.Vector3(0, CONFIG.cameraHeight, 0),
+                rotation: new THREE.Euler(0, 0, 0, 'YXZ'),
+                velocity: new THREE.Vector3()
+            };
+        }
+
+
+
+
+
+         function createDrugs() {
+            const drugKeys = Object.keys(DRUG_DATABASE);
+            const positions = [
+                [-7, 1.6, -6], [-4, 1.6, -6], [-1, 1.6, -6], [2, 1.6, -6], [5, 1.6, -6],
+                [-7, 1.6, 0], [-4, 1.6, 0], [-1, 1.6, 0], [2, 1.6, 0], [5, 1.6, 0]
+            ];
+
+            drugKeys.forEach((key, i) => {
+                if (i >= positions.length) return;
+                
+                const drug = DRUG_DATABASE[key];
+                const pos = positions[i];
+                
+                // Создание бутылочки
+                const bottleGroup = new THREE.Group();
+                bottleGroup.userData = {
+                    type: 'drug',
+                    id: key,
+                    data: drug,
+                    taken: false,
+                    originalPosition: new THREE.Vector3(pos[0], pos[1], pos[2])
+                };
+
+                // Сохраняем исходную позицию
+                originalDrugPositions.set(bottleGroup, {
+                    x: pos[0],
+                    y: pos[1],
+                    z: pos[2]
+                });
+
+                // Бутылка
+                const bottleGeometry = new THREE.CylinderGeometry(0.1, 0.13, 0.4, 16);
+                const bottleMaterial = new THREE.MeshPhongMaterial({
+                    color: drug.color,
+                    transparent: true,
+                    opacity: 0.9,
+                    shininess: 100
+                });
+                const bottle = new THREE.Mesh(bottleGeometry, bottleMaterial);
+                bottle.castShadow = true;
+                bottleGroup.add(bottle);
+
+                // Крышка
+                const capGeometry = new THREE.CylinderGeometry(0.13, 0.13, 0.06, 16);
+                const capMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x333333,
+                    metalness: 0.8,
+                    roughness: 0.2
+                });
+                const cap = new THREE.Mesh(capGeometry, capMaterial);
+                cap.position.y = 0.23;
+                cap.castShadow = true;
+                bottleGroup.add(cap);
+
+                // Этикетка с названием
+                const createLabel = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 128;
+                    canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Фон этикетки
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, 128, 64);
+                    
+                    // Рамка
+                    ctx.strokeStyle = '#333333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(2, 2, 124, 60);
+                    
+                    // Название препарата
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(drug.name.substring(0, 12), 64, 32);
+                    
+                    return canvas;
+                };
+
+                const labelCanvas = createLabel();
+                const labelTexture = new THREE.CanvasTexture(labelCanvas);
+                const labelGeometry = new THREE.PlaneGeometry(0.2, 0.1);
+                const labelMaterial = new THREE.MeshBasicMaterial({
+                    map: labelTexture,
+                    transparent: true
+                });
+                const label = new THREE.Mesh(labelGeometry, labelMaterial);
+                label.position.z = 0.13;
+                label.position.y = 0.1;
+                bottleGroup.add(label);
+
+                // Свечение
+                const glowLight = new THREE.PointLight(drug.color, 0.3, 1.5);
+                glowLight.position.set(0, 0.2, 0);
+                bottleGroup.add(glowLight);
+
+                bottleGroup.position.set(pos[0], pos[1], pos[2]);
+                scene.add(bottleGroup);
+                gameObjects.push(bottleGroup);
+            });
+        }
+
+
+        function createPatients() {
+            PATIENTS.forEach((patientData, index) => {
+                const patientGroup = new THREE.Group();
+                patientGroup.userData = {
+                    type: 'patient',
+                    id: index,
+                    data: patientData,
+                    healed: false
+                };
+
+                // Кровать
+                const bedGeometry = new THREE.BoxGeometry(1.5, 0.2, 2);
+                const bedMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+                const bed = new THREE.Mesh(bedGeometry, bedMaterial);
+                bed.position.y = 0.1;
+                bed.receiveShadow = true;
+                patientGroup.add(bed);
+
+                // Ножки кровати
+                for (let i = -1; i <= 1; i += 2) {
+                    for (let j = -1; j <= 1; j += 2) {
+                        const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8);
+                        const leg = new THREE.Mesh(legGeometry, bedMaterial);
+                        leg.position.set(i * 0.6, -0.3, j * 0.8);
+                        patientGroup.add(leg);
+                    }
+                }
+
+                // Тело пациента (маникен)
+                const bodyGeometry = new THREE.BoxGeometry(0.8, 0.3, 1.5);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffddcc,
+                    roughness: 0.8
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.35;
+                body.castShadow = true;
+                body.name = "body";
+                patientGroup.add(body);
+
+                // Голова
+                const headGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const headMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffccaa,
+                    roughness: 0.7
+                });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 0.35;
+                head.position.z = -0.5;
+                head.castShadow = true;
+                head.name = "head";
+                patientGroup.add(head);
+
+                // Ноги
+                for (let i = -1; i <= 1; i += 2) {
+                    const legGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8);
+                    const leg = new THREE.Mesh(legGeometry, bodyMaterial);
+                    leg.position.set(i * 0.2, -0.2, 0.3);
+                    patientGroup.add(leg);
+                }
+
+                // Руки
+                for (let i = -1; i <= 1; i += 2) {
+                    const armGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.4, 8);
+                    const arm = new THREE.Mesh(armGeometry, bodyMaterial);
+                    arm.position.set(i * 0.5, 0.35, 0);
+                    arm.rotation.z = i * 0.3;
+                    patientGroup.add(arm);
+                }
+
+                // Яркий красный индикатор болезни
+                const illnessIndicator = new THREE.PointLight(0xff0000, 1, 3);
+                illnessIndicator.position.set(0, 1, 0);
+                illnessIndicator.name = "illnessLight";
+                patientGroup.add(illnessIndicator);
+
+                // Пульсирующий эффект
+                const pulseGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+                const pulseMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const pulseSphere = new THREE.Mesh(pulseGeometry, pulseMaterial);
+                pulseSphere.position.set(0, 1, 0);
+                pulseSphere.name = "pulseSphere";
+                patientGroup.add(pulseSphere);
+
+                patientGroup.position.set(
+                    patientData.position.x,
+                    0,
+                    patientData.position.z
+                );
+                
+                scene.add(patientGroup);
+                gameObjects.push(patientGroup);
+
+                // Создаем DOM-подсветку для пациента
+                createPatientHighlight(patientData.position, patientData);
+            });
+        }
+
+        function createPatientHighlight(position, patientData) {
+    const highlight = document.createElement('div');
+    highlight.className = 'patient-highlight';
+    highlight.style.left = '50%';
+    highlight.style.top = '50%';
+    highlight.id = `patient-highlight-${patientHighlights.length}`;
+    document.getElementById('ui-overlay').appendChild(highlight);
+    
+    // Создаем надпись с диагнозом
+    const label = document.createElement('div');
+    label.className = 'patient-label';
+    label.id = `patient-label-${patientHighlights.length}`;
+    label.innerHTML = `
+        <h4>${patientData.name}</h4>
+        <div class="diagnosis">${patientData.diagnosis}</div>
+        <div class="description">${patientData.description}</div>
+    `;
+    document.getElementById('ui-overlay').appendChild(label);
+    
+    patientHighlights.push({highlight, label, patientData});
+}
+
+          function updatePatientHighlights() {
+    if (!camera || !patientHighlights.length) return;
+
+    patientHighlights.forEach((patientObj, index) => {
+        const {highlight, label} = patientObj;
+        
+        if (index < PATIENTS.length) {
+            const patientPos = PATIENTS[index].position;
+            const vector = new THREE.Vector3(patientPos.x, 1.8, patientPos.z); // Немного выше
+            
+            // Преобразуем 3D координаты в 2D
+            vector.project(camera);
+            
+            // Если пациент за камерой, не показываем подсветку
+            if (vector.z > 1) {
+                highlight.style.display = 'none';
+                label.style.display = 'none';
+                return;
+            }
+            
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+            
+            // Проверяем, попадает ли точка в видимую область
+            if (x >= -100 && x <= window.innerWidth + 100 && 
+                y >= -100 && y <= window.innerHeight + 100) {
+                
+                // Позиция подсветки
+                highlight.style.left = `${x - 100}px`;
+                highlight.style.top = `${y - 100}px`;
+                
+                // Позиция надписи (над пациентом)
+                label.style.left = `${x}px`;
+                label.style.top = `${y - 120}px`;
+                
+                // Скрываем для вылеченных пациентов
+                const patient = gameObjects.find(obj => 
+                    obj.userData && obj.userData.type === 'patient' && 
+                    obj.userData.id === index
+                );
+                
+                if (patient && patient.userData.healed) {
+                    highlight.style.display = 'none';
+                    label.style.display = 'block';
+                    label.className = 'patient-label healed';
+                    label.querySelector('.diagnosis').textContent = '✅ Вылечен';
+                } else {
+                    highlight.style.display = 'block';
+                    label.style.display = 'block';
+                    label.className = 'patient-label';
+                }
+            } else {
+                highlight.style.display = 'none';
+                label.style.display = 'none';
+            }
+        }
+    });
+}
+        function createChristmasTree() {
+            const treeGroup = new THREE.Group();
+            
+            // Ствол
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1, 8);
+            const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = 0.5;
+            treeGroup.add(trunk);
+
+            // Ярусы елки
+            const tiers = [
+                { radius: 1.5, height: 1, y: 1.5 },
+                { radius: 1.2, height: 0.8, y: 2.3 },
+                { radius: 0.9, height: 0.6, y: 2.9 },
+                { radius: 0.6, height: 0.4, y: 3.3 }
+            ];
+
+            tiers.forEach(tier => {
+                const coneGeometry = new THREE.ConeGeometry(tier.radius, tier.height, 8);
+                const coneMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+                const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+                cone.position.y = tier.y;
+                treeGroup.add(cone);
+            });
+
+            // Звезда на верхушке
+            const starGeometry = new THREE.ConeGeometry(0.3, 0.5, 5);
+            const starMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffaa00 });
+            const star = new THREE.Mesh(starGeometry, starMaterial);
+            star.position.y = 3.8;
+            star.rotation.y = Math.PI / 10;
+            treeGroup.add(star);
+
+            // Новогодние шары
+            const ballColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+            for (let i = 0; i < 20; i++) {
+                const ballGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const ballMaterial = new THREE.MeshStandardMaterial({ 
+                    color: ballColors[i % ballColors.length],
+                    emissive: ballColors[i % ballColors.length],
+                    emissiveIntensity: 0.3
+                });
+                const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+                
+                const angle = (i / 20) * Math.PI * 2;
+                const radius = 0.5 + Math.random() * 0.8;
+                const height = 1 + Math.random() * 2;
+                
+                ball.position.set(
+                    Math.cos(angle) * radius,
+                    height,
+                    Math.sin(angle) * radius
+                );
+                treeGroup.add(ball);
+            }
+
+            treeGroup.position.set(-8, 0, 0);
+            scene.add(treeGroup);
+        }
+
+        function initSnow() {
+            const canvas = document.getElementById('snow-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Создаем снежинки
+            for (let i = 0; i < 200; i++) {
+                snowParticles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 3 + 1,
+                    d: Math.random() * 2 + 1,
+                    o: Math.random() * 0.5 + 0.5
+                });
+            }
+            
+            function drawSnow() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                
+                snowParticles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.globalAlpha = p.o;
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    
+                    p.y += p.d;
+                    p.x += Math.sin(p.y * 0.01) * 0.5;
+                    
+                    if (p.y > canvas.height) {
+                        p.y = -10;
+                        p.x = Math.random() * canvas.width;
+                    }
+                });
+            }
+            
+            // Анимация снега
+            function animateSnow() {
+                drawSnow();
+                requestAnimationFrame(animateSnow);
+            }
+            
+            animateSnow();
+        }
+
+        // ========== УПРАВЛЕНИЕ ==========
+        function setupControls() {
+            // Управление с клавиатуры
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                if (e.key === 'e' || e.key === 'E') {
+                    interact();
+                }
+                
+                if (e.key === 'c' || e.key === 'C') {
+                    toggleCamera();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+
+            // Управление мышью - ИСПРАВЛЕННАЯ ЧАСТЬ (убрана инверсия)
+            document.addEventListener('mousemove', (e) => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    // Убираем минусы - теперь нормальное управление
+                    mouseX += e.movementX * 0.002;
+                    mouseY += e.movementY * 0.002;
+                    mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
+                }
+            });
+
+            document.addEventListener('click', () => {
+                if (!isMobile && document.pointerLockElement !== renderer.domElement) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+
+            // Обработка изменения размера окна
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setupMobileControls() {
+            if (!isMobile) return;
+
+            const joystick = document.getElementById('joystick');
+            const joystickArea = document.querySelector('.joystick-area');
+            const actionBtn = document.getElementById('action-btn');
+
+            let joystickStartX = 0;
+            let joystickStartY = 0;
+
+            // Джойстик
+            joystick.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickActive = true;
+                const rect = joystickArea.getBoundingClientRect();
+                joystickStartX = rect.left + rect.width / 2;
+                joystickStartY = rect.top + rect.height / 2;
+                updateJoystick(e.touches[0]);
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (joystickActive) {
+                    e.preventDefault();
+                    updateJoystick(e.touches[0]);
+                }
+            });
+
+            document.addEventListener('touchend', (e) => {
+                if (joystickActive) {
+                    e.preventDefault();
+                    joystickActive = false;
+                    joystickVector = { x: 0, y: 0 };
+                    joystick.style.transform = 'translate(35px, 35px)';
+                }
+            });
+
+            // Кнопка действия
+            actionBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                interact();
+                actionBtn.style.transform = 'scale(0.95)';
+            });
+
+            actionBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                actionBtn.style.transform = 'scale(1)';
+            });
+
+            function updateJoystick(touch) {
+                const x = touch.clientX - joystickStartX;
+                const y = touch.clientY - joystickStartY;
+                
+                const distance = Math.sqrt(x * x + y * y);
+                const maxDistance = 35;
+                
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(y, x);
+                    joystickVector.x = Math.cos(angle);
+                    joystickVector.y = Math.sin(angle);
+                    
+                    const limitedX = Math.cos(angle) * maxDistance;
+                    const limitedY = Math.sin(angle) * maxDistance;
+                    joystick.style.transform = `translate(${limitedX + 35}px, ${limitedY + 35}px)`;
+                } else {
+                    joystickVector.x = x / maxDistance;
+                    joystickVector.y = y / maxDistance;
+                    joystick.style.transform = `translate(${x + 35}px, ${y + 35}px)`;
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('camera-toggle').addEventListener('click', toggleCamera);
+            document.getElementById('music-control').addEventListener('click', toggleMusic);
+        }
+
+
+        
+        function toggleMusic() {
+            const music = document.getElementById('background-music');
+            if (music.paused) {
+                music.play();
+                document.getElementById('music-control').innerHTML = "🔊";
+            } else {
+                music.pause();
+                document.getElementById('music-control').innerHTML = "🔇";
+            }
+        }
+
+
+        function toggleCamera() {
+            if (!cameraInitialized) return;
+            
+            cameraMode = cameraMode === 'firstPerson' ? 'thirdPerson' : 'firstPerson';
+            updateCameraPosition();
+        }
+
+        function updateCameraPosition() {
+            if (!player || !camera) return;
+            
+            if (cameraMode === 'firstPerson') {
+                camera.position.set(player.position.x, CONFIG.cameraHeight, player.position.z);
+                camera.rotation.order = 'YXZ';
+                camera.rotation.x = mouseY;
+                camera.rotation.y = mouseX;
+            } else {
+                // Третий человек - камера позади игрока
+                const distance = 5;
+                const height = 3;
+                const offsetX = Math.sin(mouseX) * distance;
+                const offsetZ = Math.cos(mouseX) * distance;
+                
+                camera.position.set(
+                    player.position.x + offsetX,
+                    CONFIG.cameraHeight + height,
+                    player.position.z + offsetZ
+                );
+                camera.lookAt(player.position.x, player.position.y, player.position.z);
+            }
+        }
+
+        // ========== ДВИЖЕНИЕ ИГРОКА ==========
+          function updatePlayerMovement() {
+            if (!player || isCameraAnimating) return; // Не двигаемся во время анимации камеры
+
+            const speed = isMobile ? CONFIG.mobileSpeed : CONFIG.playerSpeed;
+            const moveVector = new THREE.Vector3();
+
+            // Управление с клавиатуры
+            if (!isMobile) {
+                if (keys['w'] || keys['arrowup']) {
+                    moveVector.z -= 1;
+                }
+                if (keys['s'] || keys['arrowdown']) {
+                    moveVector.z += 1;
+                }
+                if (keys['a'] || keys['arrowleft']) {
+                    moveVector.x -= 1;
+                }
+                if (keys['d'] || keys['arrowright']) {
+                    moveVector.x += 1;
+                }
+            }
+            // Управление с джойстика
+            else if (joystickActive) {
+                moveVector.x = joystickVector.x;
+                moveVector.z = joystickVector.y;
+            }
+
+            // Нормализация и применение скорости
+            if (moveVector.length() > 0) {
+                moveVector.normalize();
+                
+                // Поворот движения в зависимости от направления камеры
+                const angle = cameraMode === 'firstPerson' ? mouseX : 0;
+                moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                
+                player.position.x += moveVector.x * speed;
+                player.position.z += moveVector.z * speed;
+                
+                // Ограничение движения по границам мира
+                const halfSize = CONFIG.worldSize / 2 - 2;
+                player.position.x = Math.max(-halfSize, Math.min(halfSize, player.position.x));
+                player.position.z = Math.max(-halfSize, Math.min(halfSize, player.position.z));
+                
+                // Обновление модели игрока
+                if (playerMesh) {
+                    playerMesh.position.set(player.position.x, 0.4, player.position.z);
+                    
+                    if (cameraMode === 'thirdPerson' && moveVector.length() > 0) {
+                        playerMesh.rotation.y = Math.atan2(moveVector.x, moveVector.z);
+                    }
+                }
+            }
+
+            // Проверка взаимодействий
+            checkInteractions();
+        }
+
+
+        // ========== ВЗАИМОДЕЙСТВИЯ ==========
+        function checkInteractions() {
+            let closestObject = null;
+            let closestDistance = CONFIG.interactionDistance + 1;
+
+            gameObjects.forEach(obj => {
+                if (obj.userData && !obj.userData.taken && !obj.userData.healed) {
+                    const distance = player.position.distanceTo(obj.position);
+                    if (distance < CONFIG.interactionDistance && distance < closestDistance) {
+                        closestDistance = distance;
+                        closestObject = obj;
+                    }
+                }
+            });
+
+            currentInteraction = closestObject;
+            
+            if (closestObject) {
+                showInteractionHint(closestObject.userData.type, closestObject.userData.data?.name);
+            } else {
+                hideInteractionHint();
+            }
+        }
+
+        function showInteractionHint(type, name = '') {
+            const hint = document.getElementById('interaction-hint');
+            let text = isMobile ? "Нажмите кнопку " : "Нажмите E ";
+            
+            switch(type) {
+                case 'drug':
+                    text += `чтобы взять ${name}`;
+                    break;
+                case 'patient':
+                    text += "чтобы дать лекарство пациенту";
+                    break;
+            }
+            
+            hint.textContent = text;
+            hint.style.display = 'block';
+        }
+
+        function hideInteractionHint() {
+            document.getElementById('interaction-hint').style.display = 'none';
+        }
+
+        function interact() {
+            if (!currentInteraction) return;
+
+            const userData = currentInteraction.userData;
+            
+            switch(userData.type) {
+                case 'drug':
+                    pickUpDrug(currentInteraction);
+                    break;
+                case 'patient':
+                    treatPatient(currentInteraction);
+                    break;
+            }
+        }
+
+        function pickUpDrug(drugObject) {
+            if (inventory.length >= 3) {
+                showMessage("Инвентарь полон! Используйте лекарство на пациенте.");
+                return;
+            }
+
+            const drugData = drugObject.userData;
+            drugData.taken = true;
+            
+            // Добавление в инвентарь
+            inventory.push(drugData.id);
+            updateInventory();
+            
+            // Визуальный эффект взятия
+            drugObject.visible = false;
+            
+            // Анимация
+            showMessage(`Взято: ${drugData.data.name} - ${drugData.data.description}`);
+            playAnimation('pickup', drugData.data.color);
+        }
+
+        function treatPatient(patientObject) {
+    if (inventory.length === 0) {
+        showMessage("У вас нет лекарств!");
+        return;
+    }
+
+    const patientData = patientObject.userData;
+    const drugId = inventory[0];
+    const drugData = DRUG_DATABASE[drugId];
+    const isCorrect = drugId === patientData.data.correctDrug;
+    
+    // ОТЛАДКА
+    console.log("Лечим пациента:", patientData.data.name);
+    console.log("Используем лекарство:", drugData.name);
+    console.log("Правильное лекарство:", patientData.data.correctDrug);
+    console.log("Результат проверки:", isCorrect);
+    console.log("Текущий прогресс до:", patientProgress);
+
+    // Удаляем использованное лекарство
+    inventory.shift();
+    updateInventory();
+    
+    // Восстанавливаем взятое лекарство на место
+    restoreDrugs();
+
+    // Применяем эффект
+    if (isCorrect) {
+        // Блокируем управление для анимации
+        isCameraAnimating = true;
+        
+        // Анимация приближения камеры
+        animateCameraToPatient(patientObject, () => {
+            // Правильное лекарство
+            patientProgress += drugData.effect;
+            patientHealth = Math.min(100, patientHealth + 10);
+            
+            console.log("Новый прогресс после:", patientProgress);
+            
+            showMessage(`✓ Правильно! ${drugData.name} помогает пациенту`);
+            playAdvancedDrugAnimation(drugData, patientObject);
+            
+            if (patientProgress >= 100) {
+                console.log("Пациент вылечен!");
+                completePatient(patientObject);
+            }
+            
+            // Возвращаем управление
+            setTimeout(() => {
+                isCameraAnimating = false;
+            }, 4000);
+        });
+        
+    } else {
+        // Неправильное лекарство
+        patientHealth -= 25;
+        showMessage(`✗ Ошибка! ${drugData.name} не подходит для ${patientData.data.diagnosis}`);
+        playAnimation('wrong', 0xff0000);
+        
+        if (patientHealth <= 0) {
+            gameOver();
+            return;
+        }
+    }
+
+    updateUI();
+}
+        // ========== АНИМАЦИИ ==========
+        function playDrugAnimation(drugData, patientObject) {
+            const overlay = document.getElementById('animation-overlay');
+            overlay.innerHTML = '';
+            overlay.style.display = 'block';
+
+            // Эффект на маникене
+            const patientPosition = patientObject.position;
+            const vector = new THREE.Vector3(patientPosition.x, 1, patientPosition.z);
+            vector.project(camera);
+            
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+            
+            const effect = document.createElement('div');
+            effect.className = 'manikin-effect';
+            effect.style.left = `${x - 50}px`;
+            effect.style.top = `${y - 50}px`;
+            effect.style.setProperty('--effect-color', drugData.effectColor);
+            overlay.appendChild(effect);
+
+            // Анимация в зависимости от типа препарата
+            switch(drugData.animation) {
+                case 'antibiotic':
+                    playAntibioticAnimation();
+                    break;
+                case 'feverReduction':
+                    playFeverReductionAnimation();
+                    break;
+                default:
+                    playDefaultAnimation(drugData);
+            }
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 3000);
+        }
+
+        function playAntibioticAnimation() {
+            const overlay = document.getElementById('animation-overlay');
+            overlay.classList.add('cell-animation');
+
+            // Создание иммунных клеток
+            for (let i = 0; i < CONFIG.cellCount; i++) {
+                setTimeout(() => {
+                    const immuneCell = document.createElement('div');
+                    immuneCell.className = 'immune-cell';
+                    immuneCell.style.left = `${Math.random() * 100}%`;
+                    immuneCell.style.top = `${Math.random() * 100}%`;
+                    overlay.appendChild(immuneCell);
+
+                    const bacteriaCell = document.createElement('div');
+                    bacteriaCell.className = 'bacteria-cell';
+                    bacteriaCell.style.left = `${Math.random() * 100}%`;
+                    bacteriaCell.style.top = `${Math.random() * 100}%`;
+                    overlay.appendChild(bacteriaCell);
+
+                    // Антитела атакуют бактерии
+                    setTimeout(() => {
+                        const antibody = document.createElement('div');
+                        antibody.className = 'antibody-particle';
+                        antibody.style.left = immuneCell.style.left;
+                        antibody.style.top = immuneCell.style.top;
+                        antibody.style.setProperty('--tx', `${Math.random() * 100 - 50}px`);
+                        antibody.style.setProperty('--ty', `${Math.random() * 100 - 50}px`);
+                        overlay.appendChild(antibody);
+                    }, 500);
+                }, i * 50);
+            }
+        }
+
+        function playFeverReductionAnimation() {
+            const overlay = document.getElementById('animation-overlay');
+            overlay.classList.add('glow-animation');
+
+            // Эффект охлаждения
+            const coolingEffect = document.createElement('div');
+            coolingEffect.style.position = 'absolute';
+            coolingEffect.style.width = '100%';
+            coolingEffect.style.height = '100%';
+            coolingEffect.style.background = 'radial-gradient(circle at center, rgba(100, 200, 255, 0.3), transparent)';
+            coolingEffect.style.animation = 'pulseGlow 2s ease-in-out';
+            overlay.appendChild(coolingEffect);
+        }
+
+        function playAnimation(type, color = 0xffffff) {
+            const overlay = document.getElementById('animation-overlay');
+            overlay.innerHTML = '';
+            overlay.style.display = 'block';
+
+            if (type === 'pickup') {
+                const flash = document.createElement('div');
+                flash.className = 'flash-effect';
+                overlay.appendChild(flash);
+            } else if (type === 'wrong') {
+                const shakeEffect = document.createElement('div');
+                shakeEffect.style.position = 'absolute';
+                shakeEffect.style.width = '100%';
+                shakeEffect.style.height = '100%';
+                shakeEffect.style.background = 'rgba(255, 0, 0, 0.3)';
+                shakeEffect.style.animation = 'flash 0.5s ease-out';
+                overlay.appendChild(shakeEffect);
+            }
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 1000);
+        }
+
+
+         function restoreDrugs() {
+            // Восстанавливаем все взятые препараты
+            gameObjects.forEach(obj => {
+                if (obj.userData && obj.userData.type === 'drug' && obj.userData.taken) {
+                    const originalPos = originalDrugPositions.get(obj);
+                    if (originalPos) {
+                        obj.position.set(originalPos.x, originalPos.y, originalPos.z);
+                        obj.visible = true;
+                        obj.userData.taken = false;
+                    }
+                }
+            });
+        }
+
+
+       function playAdvancedDrugAnimation(drugData, patientObject) {
+            const overlay = document.getElementById('animation-overlay');
+            overlay.innerHTML = '';
+            overlay.style.display = 'block';
+            
+            // Создаем снежный вихрь с молекулами
+            const battleContainer = document.createElement('div');
+            battleContainer.className = 'molecule-battle';
+            overlay.appendChild(battleContainer);
+            
+            // Создаем молекулы для битвы
+            const moleculeCount = 50;
+            
+            for (let i = 0; i < moleculeCount; i++) {
+                setTimeout(() => {
+                    // Хорошие молекулы (зеленые)
+                    const goodMolecule = document.createElement('div');
+                    goodMolecule.className = 'molecule good-molecule';
+                    goodMolecule.style.width = `${Math.random() * 20 + 10}px`;
+                    goodMolecule.style.height = goodMolecule.style.width;
+                    goodMolecule.style.left = `${Math.random() * 100}%`;
+                    goodMolecule.style.top = `${Math.random() * 100}%`;
+                    goodMolecule.style.animationDelay = `${Math.random() * 2}s`;
+                    goodMolecule.style.opacity = Math.random() * 0.7 + 0.3;
+                    battleContainer.appendChild(goodMolecule);
+                    
+                    // Плохие молекулы (красные)
+                    const badMolecule = document.createElement('div');
+                    badMolecule.className = 'molecule bad-molecule';
+                    badMolecule.style.width = `${Math.random() * 20 + 10}px`;
+                    badMolecule.style.height = badMolecule.style.width;
+                    badMolecule.style.left = `${Math.random() * 100}%`;
+                    badMolecule.style.top = `${Math.random() * 100}%`;
+                    badMolecule.style.animationDelay = `${Math.random() * 2}s`;
+                    badMolecule.style.opacity = Math.random() * 0.7 + 0.3;
+                    battleContainer.appendChild(badMolecule);
+                    
+                    // Анимация столкновения
+                    setTimeout(() => {
+                        // Эффект взрыва при столкновении
+                        const explosion = document.createElement('div');
+                        explosion.style.position = 'absolute';
+                        explosion.style.width = '30px';
+                        explosion.style.height = '30px';
+                        explosion.style.background = 'radial-gradient(circle, #ffff00, transparent 70%)';
+                        explosion.style.borderRadius = '50%';
+                        explosion.style.left = goodMolecule.style.left;
+                        explosion.style.top = goodMolecule.style.top;
+                        explosion.style.animation = 'flash 0.5s ease-out';
+                        battleContainer.appendChild(explosion);
+                        
+                        // Удаляем молекулы после столкновения
+                        setTimeout(() => {
+                            goodMolecule.style.opacity = '0';
+                            badMolecule.style.opacity = '0';
+                            explosion.remove();
+                        }, 500);
+                    }, 1000 + Math.random() * 1000);
+                }, i * 100);
+            }
+            
+            // Эффект на маникене
+            const patientPosition = patientObject.position;
+            const vector = new THREE.Vector3(patientPosition.x, 1, patientPosition.z);
+            vector.project(camera);
+            
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+            
+            const effect = document.createElement('div');
+            effect.className = 'manikin-effect';
+            effect.style.left = `${x - 50}px`;
+            effect.style.top = `${y - 50}px`;
+            effect.style.setProperty('--effect-color', drugData.effectColor);
+            overlay.appendChild(effect);
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                battleContainer.innerHTML = '';
+            }, 4000);
+        }
+
+         function returnCameraToPlayer() {
+            const startPos = camera.position.clone();
+            const targetPos = new THREE.Vector3(
+                player.position.x,
+                CONFIG.cameraHeight,
+                player.position.z
+            );
+            
+            let progress = 0;
+            const duration = 1000;
+            
+            function animateReturn() {
+                progress += 16.67;
+                const t = Math.min(progress / duration, 1);
+                
+                const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                
+                camera.position.lerpVectors(startPos, targetPos, easeT);
+                camera.rotation.order = 'YXZ';
+                camera.rotation.x = mouseY;
+                camera.rotation.y = mouseX;
+                
+                if (t < 1) {
+                    requestAnimationFrame(animateReturn);
+                }
+            }
+            
+            animateReturn();
+        }
+
+        function animateCameraToPatient(patientObject, onComplete) {
+            const patientPos = patientObject.position.clone();
+            patientPos.y += 1; // Поднимаем немного выше пациента
+            
+            // Сохраняем текущую позицию камеры
+            const startPos = camera.position.clone();
+            const startRotation = camera.rotation.clone();
+            
+            // Целевая позиция - близко к пациенту
+            const targetPos = new THREE.Vector3(
+                patientPos.x - 1.5,
+                patientPos.y + 1,
+                patientPos.z - 2
+            );
+            
+            // Целевой взгляд на пациента
+            const lookAtPos = new THREE.Vector3(
+                patientPos.x,
+                patientPos.y,
+                patientPos.z
+            );
+            
+            // Анимация
+            let progress = 0;
+            const duration = 1000; // 1 секунда
+            
+            function animateCamera() {
+                progress += 16.67; // примерно 60 FPS
+                const t = Math.min(progress / duration, 1);
+                
+                // Плавное движение
+                const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                
+                camera.position.lerpVectors(startPos, targetPos, easeT);
+                camera.lookAt(lookAtPos);
+                
+                if (t < 1) {
+                    requestAnimationFrame(animateCamera);
+                } else {
+                    onComplete();
+                    
+                    // Возвращаем камеру через 3 секунды
+                    setTimeout(() => {
+                        returnCameraToPlayer();
+                    }, 3000);
+                }
+            }
+            
+            animateCamera();
+        }
+
+
+        // ========== ИГРОВАЯ ЛОГИКА ==========
+        function completePatient(patientObject) {
+    patientObject.userData.healed = true;
+    curedPatientsCount++;
+    
+    // Отключаем индикатор болезни
+    patientObject.children.forEach(child => {
+        if (child.name === "illnessLight") {
+            child.intensity = 0;
+        }
+        if (child.name === "pulseSphere") {
+            child.visible = false;
+        }
+    });
+
+    // Включаем индикатор здоровья
+    const healthLight = new THREE.PointLight(0x00ff00, 0.8, 3);
+    healthLight.position.set(0, 1, 0);
+    healthLight.name = "healthLight";
+    patientObject.add(healthLight);
+
+    showMessage(`🎉 Пациент ${PATIENTS[currentPatient].name} вылечен!`);
+    
+    // Обновляем счетчик вылеченных
+    document.getElementById('cured-count').textContent = `${curedPatientsCount}/${totalPatients}`;
+    
+    // Обновляем надпись пациента
+    const label = document.getElementById(`patient-label-${patientObject.userData.id}`);
+    if (label) {
+        label.className = 'patient-label healed';
+        const diagnosisEl = label.querySelector('.diagnosis');
+        if (diagnosisEl) {
+            diagnosisEl.textContent = '✅ Вылечен';
+            diagnosisEl.style.color = '#00ff00';
+        }
+    }
+    
+    if (curedPatientsCount >= totalPatients) {
+        setTimeout(() => gameComplete(), 2000);
+    } else {
+        // Переходим к следующему пациенту
+        setTimeout(() => {
+            // Находим следующего невылеченного пациента
+            let nextPatientFound = false;
+            for (let i = 0; i < PATIENTS.length; i++) {
+                const patientObj = gameObjects.find(obj => 
+                    obj.userData && obj.userData.type === 'patient' && 
+                    obj.userData.id === i && !obj.userData.healed
+                );
+                
+                if (patientObj) {
+                    currentPatient = i;
+                    patientHealth = 100;
+                    patientProgress = 0;
+                    nextPatientFound = true;
+                    break;
+                }
+            }
+            
+            if (nextPatientFound) {
+                updateUI();
+                showMessage(`Новый пациент: ${PATIENTS[currentPatient].name}`);
+            }
+        }, 2000);
+    }
+}
+        function gameOver() {
+            showMessage("💔 Пациент не выжил... Игра окончена", 5000);
+            setTimeout(() => {
+                location.reload();
+            }, 5000);
+        }
+
+        function gameComplete() {
+            document.getElementById('game-complete').style.display = 'flex';
+            
+            // Праздничные эффекты
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.style.position = 'fixed';
+                    confetti.style.width = '20px';
+                    confetti.style.height = '20px';
+                    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 60%)`;
+                    confetti.style.borderRadius = '50%';
+                    confetti.style.left = `${Math.random() * 100}%`;
+                    confetti.style.top = '-20px';
+                    confetti.style.zIndex = '2001';
+                    confetti.style.animation = `fall ${Math.random() * 2 + 2}s linear forwards`;
+                    
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes fall {
+                            to { transform: translateY(100vh) rotate(${Math.random() * 360}deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 100);
+            }
+        }
+
+        // ========== UI ФУНКЦИИ ==========
+         // ========== UI ФУНКЦИИ ==========
+function updateUI() {
+    document.getElementById('health-value').textContent = `${patientHealth}%`;
+    document.getElementById('progress-value').textContent = `${patientProgress}%`;
+    
+    document.getElementById('health-bar').style.width = `${patientHealth}%`;
+    document.getElementById('progress-bar').style.width = `${patientProgress}%`;
+    
+    // Изменение цвета здоровья
+    const healthBar = document.getElementById('health-bar');
+    if (patientHealth > 70) {
+        healthBar.style.background = 'linear-gradient(90deg, #4caf50, #8bc34a)';
+        healthBar.textContent = `${patientHealth}%`;
+    } else if (patientHealth > 30) {
+        healthBar.style.background = 'linear-gradient(90deg, #ff9800, #ffb74d)';
+        healthBar.textContent = `${patientHealth}%`;
+    } else {
+        healthBar.style.background = 'linear-gradient(90deg, #f44336, #ef5350)';
+        healthBar.textContent = `${patientHealth}%`;
+    }
+    
+    // Обновляем текст в progress bar
+    document.getElementById('progress-bar').textContent = `${patientProgress}%`;
+}
+
+        function updateInventory() {
+            // Обновляем текущий препарат
+            if (inventory.length > 0) {
+                const currentDrug = DRUG_DATABASE[inventory[0]];
+                document.getElementById('current-drug').textContent = currentDrug.name;
+                document.getElementById('current-drug').style.color = `#${currentDrug.color.toString(16)}`;
+            } else {
+                document.getElementById('current-drug').textContent = "Нет";
+                document.getElementById('current-drug').style.color = "#ffffff";
+            }
+            
+            // Обновляем слоты
+            for (let i = 1; i <= 3; i++) {
+                const slot = document.getElementById(`slot${i}`);
+                const drugId = inventory[i - 1];
+                
+                if (drugId) {
+                    const drug = DRUG_DATABASE[drugId];
+                    slot.querySelector('.drug-icon').textContent = drug.icon;
+                    slot.querySelector('.drug-name').textContent = drug.name.substring(0, 6);
+                    slot.className = 'inventory-slot filled';
+                    slot.title = `${drug.name}: ${drug.description}`;
+                } else {
+                    slot.querySelector('.drug-icon').textContent = '';
+                    slot.querySelector('.drug-name').textContent = '';
+                    slot.className = 'inventory-slot';
+                    slot.title = 'Пустой слот';
+                }
+            }
+        }
+
+        function showMessage(text, duration = 3000) {
+            const messageDisplay = document.getElementById('message-display');
+            messageDisplay.textContent = text;
+            messageDisplay.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDisplay.style.display = 'none';
+            }, duration);
+        }
+
+        // ========== СИСТЕМНЫЕ ФУНКЦИИ ==========
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            if (isCameraAnimating) {
+                // Если камера анимируется, только рендерим сцену
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            animationId = requestAnimationFrame(animate);
+            
+            if (player) {
+                updatePlayerMovement();
+            }
+            
+            if (cameraInitialized) {
+                updateCameraPosition();
+                updatePatientHighlights();
+            }
+            // Анимация объектов
+            gameObjects.forEach(obj => {
+                if (obj.userData && !obj.userData.healed) {
+                    if (obj.userData.type === 'drug' && !obj.userData.taken) {
+                        obj.rotation.y += 0.01;
+                        obj.position.y = 0.4 + Math.sin(Date.now() * 0.003 + obj.position.x) * 0.05;
+                    } else if (obj.userData.type === 'patient' && !obj.userData.healed) {
+                        // Пульсация индикатора болезни
+                        const pulseSphere = obj.children.find(child => child.name === "pulseSphere");
+                        if (pulseSphere) {
+                            pulseSphere.scale.x = 1 + Math.sin(Date.now() * 0.005) * 0.2;
+                            pulseSphere.scale.y = 1 + Math.sin(Date.now() * 0.005) * 0.2;
+                            pulseSphere.scale.z = 1 + Math.sin(Date.now() * 0.005) * 0.2;
+                        }
+                    }
+                }
+            });
+            
+            
+            renderer.render(scene, camera);
+        }
+
+        // ========== ЗАПУСК ИГРЫ ==========
+        // Инициализация при загрузке
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
