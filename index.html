@@ -821,96 +821,92 @@ function setupMobileControls() {
     let joystickStartX = 0;
     let joystickStartY = 0;
 
-    // Управление камерой касанием (провод пальцем по экрану)
+    // === 1. Управление камерой — только если касание НЕ в зоне джойстика и НЕ на кнопке ===
     sceneContainer.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-            // Одно касание - управление камерой
-            isTouching = true;
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            e.preventDefault();
+        const touch = e.touches[0];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        // Если коснулись джойстика или кнопки действия — игнорируем
+        if (joystickArea.contains(target) || actionBtn.contains(target)) {
+            return;
         }
+
+        isTouching = true;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        e.preventDefault(); // Только здесь — безопасно
     });
 
     sceneContainer.addEventListener('touchmove', (e) => {
-        if (isTouching && e.touches.length === 1) {
-            const touch = e.touches[0];
-            const deltaX = touch.clientX - touchStartX;
-            const deltaY = touch.clientY - touchStartY;
-            
-            // Обновляем вращение камеры
-            mouseX += deltaX * touchSensitivity;
-            mouseY += deltaY * touchSensitivity;
-            mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
-            
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            e.preventDefault();
-        }
+        if (!isTouching) return;
+
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+
+        mouseX += deltaX * touchSensitivity;
+        mouseY += deltaY * touchSensitivity;
+        mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
+
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+
+        e.preventDefault();
     });
 
-    sceneContainer.addEventListener('touchend', (e) => {
+    sceneContainer.addEventListener('touchend', () => {
         isTouching = false;
     });
 
-    // Джойстик для движения
-    joystick.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+    // === 2. Джойстик ===
+    joystickArea.addEventListener('touchstart', (e) => {
+        e.stopPropagation(); // Только останавливаем распространение
+        // НЕ вызываем preventDefault() здесь глобально!
+
         joystickActive = true;
         const rect = joystickArea.getBoundingClientRect();
         joystickStartX = rect.left + rect.width / 2;
         joystickStartY = rect.top + rect.height / 2;
         updateJoystick(e.touches[0]);
-        
-        // Останавливаем распространение, чтобы не триггерить управление камерой
-        e.stopPropagation();
     });
 
-    document.addEventListener('touchmove', (e) => {
+    joystickArea.addEventListener('touchmove', (e) => {
         if (joystickActive) {
-            e.preventDefault();
+            e.stopPropagation();
             updateJoystick(e.touches[0]);
-            e.stopPropagation();
         }
     });
 
-    document.addEventListener('touchend', (e) => {
-        if (joystickActive) {
-            e.preventDefault();
-            joystickActive = false;
-            joystickVector = { x: 0, y: 0 };
-            joystick.style.transform = 'translate(35px, 35px)';
-            e.stopPropagation();
-        }
-        isTouching = false;
+    joystickArea.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+        joystickActive = false;
+        joystickVector = { x: 0, y: 0 };
+        joystick.style.transform = 'translate(35px, 35px)';
     });
 
-    // Кнопка действия
+    // === 3. Кнопка действия ===
     actionBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+        e.stopPropagation();
         interact();
         actionBtn.style.transform = 'scale(0.95)';
-        e.stopPropagation();
     });
 
     actionBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        actionBtn.style.transform = 'scale(1)';
         e.stopPropagation();
+        actionBtn.style.transform = 'scale(1)';
     });
 
     function updateJoystick(touch) {
         const x = touch.clientX - joystickStartX;
         const y = touch.clientY - joystickStartY;
-        
         const distance = Math.sqrt(x * x + y * y);
         const maxDistance = 35;
-        
+
         if (distance > maxDistance) {
             const angle = Math.atan2(y, x);
             joystickVector.x = Math.cos(angle);
             joystickVector.y = Math.sin(angle);
-            
+
             const limitedX = Math.cos(angle) * maxDistance;
             const limitedY = Math.sin(angle) * maxDistance;
             joystick.style.transform = `translate(${limitedX + 35}px, ${limitedY + 35}px)`;
@@ -921,7 +917,6 @@ function setupMobileControls() {
         }
     }
 }
-
 
         // ========== БАЗА ДАННЫХ ==========
         const DRUG_DATABASE = {
