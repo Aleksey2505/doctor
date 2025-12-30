@@ -570,6 +570,63 @@
 .patient-label.healed .diagnosis {
     color: #00ff00;
 }
+
+
+@keyframes floatHeart {
+    0% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
+        opacity: 0.8;
+    }
+    50% { 
+        transform: translateY(-60vh) rotate(180deg) scale(1.2); 
+        opacity: 1;
+    }
+    100% { 
+        transform: translateY(-120vh) rotate(360deg) scale(0.8); 
+        opacity: 0;
+    }
+}
+
+/* Подсказка для мобильного управления */
+#mobile-hint {
+    position: absolute;
+    bottom: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #64b5f6;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 12px;
+    text-align: center;
+    display: none;
+    z-index: 12;
+    border: 1px solid #64b5f6;
+    pointer-events: none;
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    #mobile-hint {
+        display: block;
+    }
+    
+    .complete-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .complete-content button {
+        padding: 12px 20px;
+        font-size: 1em;
+    }
+}
+Добавьте подсказ
+
+
+
+
+
     </style>
 </head>
 <body>
@@ -584,6 +641,12 @@
     <!-- Холст для снега -->
     <canvas id="snow-canvas"></canvas>
     
+
+    <div id="mobile-hint">
+    👆 Проведите пальцем по экрану для поворота камеры<br>
+    🎮 Используйте джойстик для движения
+</div>
+
     <!-- UI оверлей -->
     <div id="ui-overlay">
         <!-- Панель информации -->
@@ -666,23 +729,41 @@
     <div id="message-display"></div>
     
     <!-- Экран завершения -->
-    <div id="game-complete">
-        <div class="complete-content">
-            <h1 style="font-size: 2.5em; margin-bottom: 20px;">🏆 ПОБЕДА!</h1>
-            <p style="font-size: 1.2em; margin-bottom: 30px;">Все пациенты вылечены! Вы отличный врач!</p>
-            <p style="font-size: 1.5em; color: gold; margin: 20px 0;">🎄 С Новым 2026 Годом! 🎄</p>
+    div id="game-complete">
+    <div class="complete-content">
+        <h1 style="font-size: 2.5em; margin-bottom: 20px;">💖 ТЫ ПРЕКРАСНЫЙ ВРАЧ!</h1>
+        <p style="font-size: 1.2em; margin-bottom: 20px;">Ты спасла всех пациентов! Твоя забота и внимание творит чудеса! ❤️</p>
+        
+        <div style="margin: 25px 0; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 15px;">
+            <p style="font-size: 1.3em; color: #ffcc00; margin-bottom: 10px;">🎁 Специальный подарок для тебя:</p>
+            <p style="font-size: 1.1em; margin-bottom: 15px;">Каждый раз, когда ты помогаешь другим, ты делаешь мир лучше!</p>
+            <p style="font-size: 1em; color: #88ff88;">Твоя доброта - самое ценное лекарство! 💊✨</p>
+        </div>
+        
+        <p style="font-size: 1.5em; color: #ff66b2; margin: 20px 0; font-family: 'Segoe UI', cursive;">
+            💝 С Новым Годом, моя прекрасная! 💝
+        </p>
+        
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+            
             <button onclick="location.reload()" style="
-                padding: 15px 40px;
-                background: linear-gradient(135deg, #4caf50, #2e7d32);
+                padding: 15px 30px;
+                background: linear-gradient(135deg, #ff66b2, #ff3388);
                 color: white;
                 border: none;
                 border-radius: 10px;
-                font-size: 1.2em;
+                font-size: 1.1em;
                 cursor: pointer;
-                margin-top: 20px;
-            ">Играть снова</button>
+            ">
+                💕 Играть снова
+            </button>
         </div>
+        
+        <p style="margin-top: 30px; font-size: 0.9em; opacity: 0.7;">
+            С любовью создано специально для тебя! 💖
+        </p>
     </div>
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -720,6 +801,127 @@
         let curedPatientsCount = 0;
         let totalPatients = 3;
         let isCameraAnimating = false;
+
+
+
+        let touchStartX = 0;
+let touchStartY = 0;
+let isTouching = false;
+let touchSensitivity = 0.005; // Чувствительность касания
+
+// Добавьте в функцию setupMobileControls():
+function setupMobileControls() {
+    if (!isMobile) return;
+
+    const joystick = document.getElementById('joystick');
+    const joystickArea = document.querySelector('.joystick-area');
+    const actionBtn = document.getElementById('action-btn');
+    const sceneContainer = document.getElementById('scene-container');
+
+    let joystickStartX = 0;
+    let joystickStartY = 0;
+
+    // Управление камерой касанием (провод пальцем по экрану)
+    sceneContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            // Одно касание - управление камерой
+            isTouching = true;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }
+    });
+
+    sceneContainer.addEventListener('touchmove', (e) => {
+        if (isTouching && e.touches.length === 1) {
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            
+            // Обновляем вращение камеры
+            mouseX += deltaX * touchSensitivity;
+            mouseY += deltaY * touchSensitivity;
+            mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
+            
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            e.preventDefault();
+        }
+    });
+
+    sceneContainer.addEventListener('touchend', (e) => {
+        isTouching = false;
+    });
+
+    // Джойстик для движения
+    joystick.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        joystickActive = true;
+        const rect = joystickArea.getBoundingClientRect();
+        joystickStartX = rect.left + rect.width / 2;
+        joystickStartY = rect.top + rect.height / 2;
+        updateJoystick(e.touches[0]);
+        
+        // Останавливаем распространение, чтобы не триггерить управление камерой
+        e.stopPropagation();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (joystickActive) {
+            e.preventDefault();
+            updateJoystick(e.touches[0]);
+            e.stopPropagation();
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        if (joystickActive) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickVector = { x: 0, y: 0 };
+            joystick.style.transform = 'translate(35px, 35px)';
+            e.stopPropagation();
+        }
+        isTouching = false;
+    });
+
+    // Кнопка действия
+    actionBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        interact();
+        actionBtn.style.transform = 'scale(0.95)';
+        e.stopPropagation();
+    });
+
+    actionBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        actionBtn.style.transform = 'scale(1)';
+        e.stopPropagation();
+    });
+
+    function updateJoystick(touch) {
+        const x = touch.clientX - joystickStartX;
+        const y = touch.clientY - joystickStartY;
+        
+        const distance = Math.sqrt(x * x + y * y);
+        const maxDistance = 35;
+        
+        if (distance > maxDistance) {
+            const angle = Math.atan2(y, x);
+            joystickVector.x = Math.cos(angle);
+            joystickVector.y = Math.sin(angle);
+            
+            const limitedX = Math.cos(angle) * maxDistance;
+            const limitedY = Math.sin(angle) * maxDistance;
+            joystick.style.transform = `translate(${limitedX + 35}px, ${limitedY + 35}px)`;
+        } else {
+            joystickVector.x = x / maxDistance;
+            joystickVector.y = y / maxDistance;
+            joystick.style.transform = `translate(${x + 35}px, ${y + 35}px)`;
+        }
+    }
+}
+
 
         // ========== БАЗА ДАННЫХ ==========
         const DRUG_DATABASE = {
