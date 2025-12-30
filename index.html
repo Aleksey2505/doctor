@@ -1025,16 +1025,6 @@ function setupMobileControls() {
             cameraInitialized = true;
             updateUI();
             animate();
-
-            if (isMobile) {
-    document.addEventListener('touchmove', function(e) {
-        if (e.target === document.getElementById('scene-container') || 
-            e.target === document.getElementById('ui-overlay') ||
-            e.target === document.getElementById('snow-canvas')) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-}
         }
 
         function createScene() {
@@ -1679,7 +1669,7 @@ function setupMobileControls() {
 
         
 
-        
+    
 
         function setupEventListeners() {
             document.getElementById('camera-toggle').addEventListener('click', toggleCamera);
